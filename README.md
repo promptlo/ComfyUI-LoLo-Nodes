@@ -1,8 +1,11 @@
 # ComfyUI-LoLo-Nodes
 
 ## 2025-12-18
-增加了一个 Lolo_save_dir_to_zip 节点，将Comfyui/output目录或者其子目录下的文件按照后缀名过滤进行压缩，压缩完成后，用户在UI界面可以直接点击下载该压缩包。
-
+增加了一个 Lolo_save_dir_to_zip 节点，将指定目录下的文件按照后缀名过滤进行压缩，压缩完成后，压缩包文件默认存储在output/zip文件夹，用户在UI界面可以直接点击下载该压缩包。
+### 初始状态
+![saveDirToZipStartup](./img/save_dir_zip_startup.png)
+### 压缩包生成状态
+![saveDirToZipReady](./img/save_dir_zip_ready.png)
 ## 2025-12-02
 本项目目的主要开发一些节点，服务于某些业务工作流。***目前开发的三个节点主要是为了配合https://github.com/yolain/ComfyUI-Easy-Use 中的For循环节点实现图片批量反推，反推出的内容进行保存*** 目前可以支持一对一文件保存，以及合并保存
 
