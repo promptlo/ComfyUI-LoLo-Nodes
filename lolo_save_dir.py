@@ -50,7 +50,7 @@ class LoloSaveDirToZip:
     RETURN_NAMES = ("file_path", "file_size")
     FUNCTION = "save_to_zip"
 
-    def save_to_zip(self, dir, seed, suffix=".txt|.jpg|.png", limit=-1, unique_id=None):
+    def save_to_zip(self, dir, seed, suffix=".txt|.jpg|.png", limit=-1, any_input=None, unique_id=None):
         """
         核心处理函数：筛选、压缩文件，并使用 unique_id 通知前端。
         """
