@@ -49,8 +49,8 @@ class LoloLoadStringFromDir:
         }
 
     CATEGORY = "LoLo Nodes/Utils"
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("str",)
+    RETURN_TYPES = ("STRING", "STRING",)
+    RETURN_NAMES = ("str", "file_name",)
     FUNCTION = "load_string"
 
     def load_string(self, dir, suffix=".txt", load=10, index=0, refresh_seed=0):
@@ -69,7 +69,7 @@ class LoloLoadStringFromDir:
         # 1. 检查目录是否存在
         if not os.path.isdir(dir):
             print(f"[LoLo Nodes] 目录不存在: {dir}")
-            return ("",)
+            return ("", "",)
         
         # 2. 确保suffix以点开头（如果不是）
         if suffix and not suffix.startswith('.'):
@@ -92,7 +92,7 @@ class LoloLoadStringFromDir:
         # 6. 检查文件数量是否足够
         if len(files) == 0:
             print(f"[LoLo Nodes] 在目录 {dir} 中未找到 {suffix} 文件")
-            return ("",)
+            return ("","",)
         
         # 7. 检查索引是否在有效范围内
         if index >= len(files):
@@ -102,25 +102,36 @@ class LoloLoadStringFromDir:
         
         # 8. 读取指定索引的文件内容
         target_file = files[index]
+
+        # 获取不带路径的完整文件名（含后缀）
+        filename_with_ext = os.path.basename(target_file)
+
+        # 分离文件名和后缀
+        filename_without_ext, file_ext = os.path.splitext(filename_with_ext)
+
+        # 现在：
+        # - filename_without_ext 是不包含路径和后缀的纯文件名
+        # - file_ext 是后缀（例如 ".txt"、".json" 等，包含点号）
+
         try:
             with open(target_file, 'r', encoding='utf-8') as f:
                 content = f.read()
             
             print(f"[LoLo Nodes] 从 {target_file} 加载了 {len(content)} 个字符")
-            return (content,)
+            return (content,filename_without_ext,)
             
         except IOError as e:
             print(f"[LoLo Nodes] 读取文件时出错: {e}")
-            return ("",)
+            return ("", "",)
         except UnicodeDecodeError:
             print(f"[LoLo Nodes] 文件编码错误，尝试使用其他编码")
             try:
                 with open(target_file, 'r', encoding='gbk') as f:
                     content = f.read()
-                return (content,)
+                return (content, filename_without_ext,)
             except:
                 print(f"[LoLo Nodes] 无法读取文件: {target_file}")
-                return ("",)
+                return ("", "",)
 
 
 class LoloLoadStringFromFile:

@@ -147,3 +147,80 @@ function getDisabledButtonStyle() {
         display: block;
     `;
 }
+
+// 为 LoloGetVideoInfo 添加文件上传按钮
+
+// 为 LoloGetVideoInfo 添加文件上传按钮
+app.registerExtension({
+    name: "LoLoNodes.VideoUpload",
+    async beforeRegisterNodeDef(nodeType, nodeData, app) {
+        if (nodeData.name === "LoloGetVideoInfo") {
+            const onNodeCreated = nodeType.prototype.onNodeCreated;
+            nodeType.prototype.onNodeCreated = function () {
+                const r = onNodeCreated?.apply(this, arguments);
+
+                // 查找 video_path 的 widget
+                const widget = this.widgets.find(w => w.name === "video_path");
+                if (widget) {
+                    // 隐藏原文本框
+                    widget.type = "hidden";
+
+                    // 创建按钮
+                    const button = document.createElement("button");
+                    button.textContent = "📁 选择视频文件";
+                    button.style.margin = "5px 0";
+                    button.style.padding = "8px 12px";
+                    button.style.background = "#2a6d8c";
+                    button.style.color = "white";
+                    button.style.border = "none";
+                    button.style.borderRadius = "4px";
+                    button.style.cursor = "pointer";
+                    button.addEventListener("click", async () => {
+                        const input = document.createElement("input");
+                        input.type = "file";
+                        input.accept = "video/*";
+                        input.onchange = async (e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+
+                            // 上传文件到 ComfyUI 的 input 目录
+                            const formData = new FormData();
+                            formData.append("image", file); // 复用上传接口
+                            formData.append("subfolder", "video");
+                            formData.append("type", "input");
+
+                            try {
+                                const resp = await fetch("/upload/image", {
+                                    method: "POST",
+                                    body: formData
+                                });
+                                const data = await resp.json();
+                                if (data.name) {
+                                    // 存储相对路径，ComfyUI 默认 input 目录
+                                    const filePath = `input/video/${data.name}`;
+                                    widget.value = filePath;
+                                    // 触发更新
+                                    this.setDirtyCanvas(true);
+                                }
+                            } catch (err) {
+                                alert("上传失败: " + err);
+                            }
+                        };
+                        input.click();
+                    });
+
+                    // 延迟将按钮插入节点 DOM（确保 this.el 已存在）
+                    setTimeout(() => {
+                        const el = this.el;
+                        if (el) {
+                            const btns = el.querySelector(".comfy-node-btns");
+                            if (btns) btns.appendChild(button);
+                            else el.appendChild(button);
+                        }
+                    }, 10);
+                }
+                return r;
+            };
+        }
+    }
+});

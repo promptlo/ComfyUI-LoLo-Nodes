@@ -3,6 +3,8 @@ from .lolo_save_string import LoloSaveString2File
 from .lolo_generate_filename import LoloGenerateFilename
 from .lolo_load_string_from_dir import LoloLoadStringFromDir,LoloLoadStringFromFile
 from .lolo_save_dir import LoloSaveDirToZip
+from .lolo_get_video_info import LoloGetVideoInfo      
+from .lolo_video_combine import LoloVideoCombine      
 import os
 # 节点类映射
 NODE_CLASS_MAPPINGS = {
@@ -10,7 +12,9 @@ NODE_CLASS_MAPPINGS = {
     "LoloGenerateFilename": LoloGenerateFilename,
     "LoloLoadStringFromDir": LoloLoadStringFromDir,
     "LoloLoadStringFromFile":LoloLoadStringFromFile,
-    "LoloSaveDirToZip": LoloSaveDirToZip
+    "LoloSaveDirToZip": LoloSaveDirToZip,
+    "LoloGetVideoInfo": LoloGetVideoInfo,
+    "LoloVideoCombine": LoloVideoCombine,
 }
 
 # 节点显示名称映射
@@ -19,7 +23,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LoloGenerateFilename": "LoLo Generate Filename",
     "LoloLoadStringFromDir": "LoLo Load String From Dir",
     "LoloLoadStringFromFile": "LoLo Load String From File",
-    "LoloSaveDirToZip": "LoLo Save Dir To Zip"
+    "LoloSaveDirToZip": "LoLo Save Dir To Zip",
+    "LoloGetVideoInfo": "LoLo Get Video Info",
+    "LoloVideoCombine": "LoLo Video Combine",
 }
 
 NODE_DIR = os.path.dirname(os.path.abspath(__file__))
