@@ -7,13 +7,13 @@ import torch
 import torchaudio
 import folder_paths
 
+from .lolo_ffmpeg_utils import get_ffmpeg_path
+
 class LoloVideoCombine:
     """
     输入：
         - any              (*)      ：仅用于触发执行
-        - video_dir        (STRING) ：视频片段所在目录（支持两种格式）：
-                                   1. 绝对路径（如 /root/output/segments）
-                                   2. 相对路径（如 "segments"）→ 自动拼接输出目录
+        - video_dir        (STRING) ：视频片段所在目录（支持相对路径）
         - audio            (AUDIO)  ：波形 = [1, channels, samples]
         - filename_prefix  (STRING) ：输出文件名前缀
     输出：
@@ -24,10 +24,12 @@ class LoloVideoCombine:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "any": ("*", {"optional": True}),
                 "video_dir": ("STRING", {"default": "segments", "multiline": False}),
                 "audio": ("AUDIO",),
                 "filename_prefix": ("STRING", {"default": "combined_video"}),
+            },
+            "optional": {
+                "any": ("*",),   # 现在变为可选输入
             },
         }
 
@@ -36,24 +38,33 @@ class LoloVideoCombine:
     FUNCTION = "combine"
     CATEGORY = "LoLo Nodes/video"
 
-    def combine(self, any, video_dir, audio, filename_prefix):
-        # ---------- 智能路径解析：自动补全输出目录 ----------
-        if not os.path.isabs(video_dir):
-            # 相对路径 → 相对于 ComfyUI 输出目录
-            base_dir = folder_paths.get_output_directory()
-            video_dir = os.path.join(base_dir, video_dir)
-            print(f"[LoloVideoCombine] 解析为相对路径: {video_dir}")
+    def __init__(self):
+        self.ffmpeg_path = None
+        self._init_ffmpeg()
 
-        # ---------- 1. 检查视频目录 ----------
+    def _init_ffmpeg(self):
+        try:
+            self.ffmpeg_path = get_ffmpeg_path()
+            print(f"[LoloVideoCombine] ffmpeg: {self.ffmpeg_path}")
+        except RuntimeError as e:
+            raise RuntimeError(f"节点初始化失败: {e}")
+
+    def combine(self, video_dir, audio, filename_prefix, any=None):
+        # ---------- 智能路径解析 ----------
+        if not os.path.isabs(video_dir):
+            video_dir = os.path.join(folder_paths.get_output_directory(), video_dir)
+            print(f"[LoloVideoCombine] 解析相对路径为: {video_dir}")
+
         if not os.path.isdir(video_dir):
             raise NotADirectoryError(f"目录不存在: {video_dir}")
 
+        # ---------- 获取视频文件列表 ----------
         files = [f for f in os.listdir(video_dir) if f.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm'))]
         files.sort()
         if not files:
             raise RuntimeError(f"目录中没有视频文件: {video_dir}")
 
-        # ---------- 2. 自动生成输出路径 ----------
+        # ---------- 自动生成输出路径 ----------
         output_dir = folder_paths.get_output_directory()
         os.makedirs(output_dir, exist_ok=True)
         counter = 1
@@ -63,54 +74,62 @@ class LoloVideoCombine:
                 break
             counter += 1
 
-        # ---------- 3. 跨平台 ffmpeg ----------
-        ffmpeg = shutil.which("ffmpeg") or "ffmpeg"
-
-        # ---------- 4. 临时文件变量预定义 ----------
+        # ---------- 临时文件变量预定义 ----------
         list_file = None
         temp_video = None
         audio_file = None
 
         try:
-            # ========== 智能路径引号处理 ==========
+            # ---------- 创建 concat 列表文件（智能引号 + 正斜杠）----------
             with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
                 list_file = f.name
                 for file in files:
                     full_path = os.path.join(video_dir, file)
-                    # 仅当路径包含空格时才加双引号（Windows/Linux均兼容）
+                    # 将所有反斜杠替换为正斜杠（Windows 兼容）
+                    full_path = full_path.replace('\\', '/')
                     if ' ' in full_path:
                         f.write(f'file "{full_path}"\n')
                     else:
                         f.write(f'file {full_path}\n')
 
-            # 临时无音频视频
+            # ---------- 临时无音频视频 ----------
             with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as tmp:
                 temp_video = tmp.name
 
             # ---------- 尝试快速拼接（流复制）----------
             try:
                 print(f"[LoloVideoCombine] 尝试快速拼接（流复制）...")
-                subprocess.run([ffmpeg, "-f", "concat", "-safe", "0",
+                subprocess.run([self.ffmpeg_path, "-f", "concat", "-safe", "0",
                                "-i", list_file, "-c", "copy", "-y", temp_video],
                                check=True, capture_output=True)
                 print(f"[LoloVideoCombine] 流复制成功")
             except subprocess.CalledProcessError as e:
                 print(f"[LoloVideoCombine] 流复制失败，错误信息:")
-                print(e.stderr.decode())
+                print(e.stderr.decode('utf-8', errors='ignore'))
                 print(f"[LoloVideoCombine] 降级为重新编码（兼容模式）...")
-                subprocess.run([ffmpeg, "-f", "concat", "-safe", "0",
-                               "-i", list_file,
-                               "-c:v", "libx264", "-crf", "18", "-preset", "fast",
-                               "-c:a", "aac", "-b:a", "192k",
-                               "-y", temp_video],
-                               check=True, capture_output=True)
-                print(f"[LoloVideoCombine] 重新编码成功")
 
-            # ---------- 5. 处理音频 ----------
+                # 使用更保守的重新编码参数，强制指定像素格式
+                try:
+                    subprocess.run([self.ffmpeg_path, "-f", "concat", "-safe", "0",
+                                   "-i", list_file,
+                                   "-c:v", "libx264", "-crf", "18", "-preset", "fast",
+                                   "-pix_fmt", "yuv420p",  # 强制兼容格式
+                                   "-c:a", "aac", "-b:a", "192k",
+                                   "-y", temp_video],
+                                   check=True, capture_output=True)
+                    print(f"[LoloVideoCombine] 重新编码成功")
+                except subprocess.CalledProcessError as e2:
+                    error_msg = f"[LoloVideoCombine] 重新编码失败！\n"
+                    error_msg += f"ffmpeg 命令: {' '.join(e2.cmd)}\n"
+                    error_msg += f"错误输出:\n{e2.stderr.decode('utf-8', errors='ignore')}\n"
+                    error_msg += "请检查视频片段是否损坏，或尝试手动运行上述命令诊断。"
+                    print(error_msg)
+                    raise RuntimeError(error_msg)
+
+            # ---------- 处理音频（输入格式 [1, channels, samples]）----------
             waveform = audio["waveform"]
             sample_rate = audio["sample_rate"]
 
-            # 转换为 [channels, samples] 用于 torchaudio.save
             if waveform.dim() == 3:
                 waveform = waveform.squeeze(0)       # [1, C, S] → [C, S]
             elif waveform.dim() == 1:
@@ -120,8 +139,8 @@ class LoloVideoCombine:
                 audio_file = tmp_audio.name
             torchaudio.save(audio_file, waveform, sample_rate)
 
-            # ---------- 6. 合并音频到最终视频 ----------
-            subprocess.run([ffmpeg, "-i", temp_video, "-i", audio_file,
+            # ---------- 合并音频到最终视频 ----------
+            subprocess.run([self.ffmpeg_path, "-i", temp_video, "-i", audio_file,
                            "-c:v", "copy", "-c:a", "aac",
                            "-map", "0:v:0", "-map", "1:a:0",
                            "-shortest", "-y", out_path],
