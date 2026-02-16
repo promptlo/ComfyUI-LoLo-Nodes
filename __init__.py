@@ -4,7 +4,11 @@ from .lolo_generate_filename import LoloGenerateFilename
 from .lolo_load_string_from_dir import LoloLoadStringFromDir,LoloLoadStringFromFile
 from .lolo_save_dir import LoloSaveDirToZip
 from .lolo_get_video_info import LoloGetVideoInfo      
-from .lolo_video_combine import LoloVideoCombine      
+from .lolo_video_combine import LoloVideoCombine
+from .FlashVSRPipeCleaner import FlashVSRPipeCleaner
+from .debugMemoryNode import DebugMemoryNode
+
+     
 import os
 # 节点类映射
 NODE_CLASS_MAPPINGS = {
@@ -15,6 +19,8 @@ NODE_CLASS_MAPPINGS = {
     "LoloSaveDirToZip": LoloSaveDirToZip,
     "LoloGetVideoInfo": LoloGetVideoInfo,
     "LoloVideoCombine": LoloVideoCombine,
+    "FlashVSRPipeCleaner": FlashVSRPipeCleaner,
+    "DebugMemoryNode": DebugMemoryNode
 }
 
 # 节点显示名称映射
@@ -26,6 +32,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LoloSaveDirToZip": "LoLo Save Dir To Zip",
     "LoloGetVideoInfo": "LoLo Get Video Info",
     "LoloVideoCombine": "LoLo Video Combine",
+    "FlashVSRPipeCleaner": "FlashVSR Pipe Cleaner",
+    "DebugMemoryNode": "Debug Memory Node"
 }
 
 NODE_DIR = os.path.dirname(os.path.abspath(__file__))
