@@ -7,6 +7,9 @@ from .lolo_get_video_info import LoloGetVideoInfo
 from .lolo_video_combine import LoloVideoCombine
 from .FlashVSRPipeCleaner import FlashVSRPipeCleaner
 from .debugMemoryNode import DebugMemoryNode
+from .wan_infinite_talk_ex import WanInfiniteTalkToVideoEx
+from .lolo_video_save_output import LoloVideoSaveOutput
+from .lolo_clear_cache import LoLolClearCache, LoLolClearCacheWithLabel
 
      
 import os
@@ -20,7 +23,11 @@ NODE_CLASS_MAPPINGS = {
     "LoloGetVideoInfo": LoloGetVideoInfo,
     "LoloVideoCombine": LoloVideoCombine,
     "FlashVSRPipeCleaner": FlashVSRPipeCleaner,
-    "DebugMemoryNode": DebugMemoryNode
+    "DebugMemoryNode": DebugMemoryNode,
+    "WanInfiniteTalkToVideoEx": WanInfiniteTalkToVideoEx,
+    "LoloVideoSaveOutput": LoloVideoSaveOutput,
+    "LoLolClearCache": LoLolClearCache,
+    "LoLolClearCacheWithLabel": LoLolClearCacheWithLabel
 }
 
 # 节点显示名称映射
@@ -33,7 +40,12 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LoloGetVideoInfo": "LoLo Get Video Info",
     "LoloVideoCombine": "LoLo Video Combine",
     "FlashVSRPipeCleaner": "FlashVSR Pipe Cleaner",
-    "DebugMemoryNode": "Debug Memory Node"
+    "DebugMemoryNode": "Debug Memory Node",
+    "WanInfiniteTalkToVideoEx": "Wan Infinite Talk To Video (Extended)",
+    "LoloVideoSaveOutput" : "Lolo Video Save Output",
+    "LoLolClearCache": "LoLo: Clear Cache",
+    "LoLolClearCacheWithLabel": "LoLo: Clear Cache (Labeled)"
+
 }
 
 NODE_DIR = os.path.dirname(os.path.abspath(__file__))

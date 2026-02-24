@@ -1,25 +1,13 @@
 import os
 import subprocess
 import tempfile
-import shutil
-
+import re
+import numpy as np
 import torch
-import torchaudio
 import folder_paths
-
 from .lolo_ffmpeg_utils import get_ffmpeg_path
 
 class LoloVideoCombine:
-    """
-    输入：
-        - any              (*)      ：仅用于触发执行
-        - video_dir        (STRING) ：视频片段所在目录（支持相对路径）
-        - audio            (AUDIO)  ：波形 = [1, channels, samples]
-        - filename_prefix  (STRING) ：输出文件名前缀
-    输出：
-        - result_path      (STRING) ：最终视频绝对路径
-    """
-
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -29,7 +17,7 @@ class LoloVideoCombine:
                 "filename_prefix": ("STRING", {"default": "combined_video"}),
             },
             "optional": {
-                "any": ("*",),   # 现在变为可选输入
+                "any": ("*",),
             },
         }
 
@@ -85,7 +73,6 @@ class LoloVideoCombine:
                 list_file = f.name
                 for file in files:
                     full_path = os.path.join(video_dir, file)
-                    # 将所有反斜杠替换为正斜杠（Windows 兼容）
                     full_path = full_path.replace('\\', '/')
                     if ' ' in full_path:
                         f.write(f'file "{full_path}"\n')
@@ -108,12 +95,11 @@ class LoloVideoCombine:
                 print(e.stderr.decode('utf-8', errors='ignore'))
                 print(f"[LoloVideoCombine] 降级为重新编码（兼容模式）...")
 
-                # 使用更保守的重新编码参数，强制指定像素格式
                 try:
                     subprocess.run([self.ffmpeg_path, "-f", "concat", "-safe", "0",
                                    "-i", list_file,
                                    "-c:v", "libx264", "-crf", "18", "-preset", "fast",
-                                   "-pix_fmt", "yuv420p",  # 强制兼容格式
+                                   "-pix_fmt", "yuv420p",
                                    "-c:a", "aac", "-b:a", "192k",
                                    "-y", temp_video],
                                    check=True, capture_output=True)
@@ -126,18 +112,42 @@ class LoloVideoCombine:
                     print(error_msg)
                     raise RuntimeError(error_msg)
 
-            # ---------- 处理音频（输入格式 [1, channels, samples]）----------
+            # ---------- 处理音频（使用 ffmpeg 直接编码为 wav）----------
             waveform = audio["waveform"]
             sample_rate = audio["sample_rate"]
 
+            # 确保波形为 [channels, samples] 2D 格式，并转换为 float32 NumPy 数组
             if waveform.dim() == 3:
-                waveform = waveform.squeeze(0)       # [1, C, S] → [C, S]
+                waveform = waveform.squeeze(0)               # [1, C, S] → [C, S]
             elif waveform.dim() == 1:
-                waveform = waveform.unsqueeze(0)     # [S] → [1, S]
+                waveform = waveform.unsqueeze(0)             # [S] → [1, S]
+
+            samples = waveform.shape[1]
+            channels = waveform.shape[0]
+            # 转换为 [samples, channels] 并转为 float32 bytes
+            audio_data = waveform.t().contiguous().numpy().astype(np.float32)
 
             with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_audio:
                 audio_file = tmp_audio.name
-            torchaudio.save(audio_file, waveform, sample_rate)
+
+            ffmpeg_audio_cmd = [
+                self.ffmpeg_path,
+                "-y",
+                "-f", "f32le",
+                "-ar", str(sample_rate),
+                "-ac", str(channels),
+                "-i", "-",
+                "-c:a", "pcm_s16le",
+                "-f", "wav",
+                audio_file
+            ]
+            proc_audio = subprocess.Popen(ffmpeg_audio_cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+            proc_audio.stdin.write(audio_data.tobytes())
+            proc_audio.stdin.close()
+            proc_audio.wait()
+            if proc_audio.returncode != 0:
+                stderr = proc_audio.stderr.read().decode('utf-8', errors='ignore')
+                raise RuntimeError(f"ffmpeg 音频编码失败 (返回码 {proc_audio.returncode}):\n{stderr}")
 
             # ---------- 合并音频到最终视频 ----------
             subprocess.run([self.ffmpeg_path, "-i", temp_video, "-i", audio_file,
