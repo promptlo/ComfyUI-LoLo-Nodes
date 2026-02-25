@@ -87,7 +87,6 @@ class LoloVideoSaveOutput:
         ffmpeg_path = get_ffmpeg_path()
         batch_size, height, width, _ = images_np.shape
 
-        # 构建 ffmpeg 命令
         cmd = [
             ffmpeg_path,
             "-y",
@@ -106,19 +105,14 @@ class LoloVideoSaveOutput:
 
         print(f"[LoloVideoSaveOutput] 执行 ffmpeg 命令: {' '.join(cmd)}")
 
-        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
-        try:
-            for i in range(batch_size):
-                proc.stdin.write(images_np[i].tobytes())
-            proc.stdin.close()
-        except BrokenPipeError:
-            stderr = proc.stderr.read().decode('utf-8', errors='ignore')
-            raise RuntimeError(f"ffmpeg 管道中断，可能输入数据不符合要求:\n{stderr}")
-
-        proc.wait()
+        # 将所有图像数据合并为一个 bytes 对象
+        raw_data = images_np.tobytes()
+        
+        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        stdout, stderr = proc.communicate(input=raw_data)
+        
         if proc.returncode != 0:
-            stderr = proc.stderr.read().decode('utf-8', errors='ignore')
-            raise RuntimeError(f"ffmpeg 编码失败 (返回码 {proc.returncode}):\n{stderr}")
+            raise RuntimeError(f"ffmpeg 编码失败 (返回码 {proc.returncode}):\n{stderr.decode('utf-8', errors='ignore')}")
 
         if not os.path.exists(output_file):
             raise RuntimeError(f"ffmpeg 执行成功但未生成输出文件: {output_file}")
