@@ -10,6 +10,9 @@ from .debugMemoryNode import DebugMemoryNode
 from .wan_infinite_talk_ex import WanInfiniteTalkToVideoEx
 from .lolo_video_save_output import LoloVideoSaveOutput
 from .lolo_clear_cache import LoLolClearCache, LoLolClearCacheWithLabel
+from .lolo_load_audio_from_dir import LoloLoadAudioFromDir
+from .lolo_get_file_count import LoloGetFileCount
+
 
      
 import os
@@ -27,7 +30,9 @@ NODE_CLASS_MAPPINGS = {
     "WanInfiniteTalkToVideoEx": WanInfiniteTalkToVideoEx,
     "LoloVideoSaveOutput": LoloVideoSaveOutput,
     "LoLolClearCache": LoLolClearCache,
-    "LoLolClearCacheWithLabel": LoLolClearCacheWithLabel
+    "LoLolClearCacheWithLabel": LoLolClearCacheWithLabel,
+    "LoloLoadAudioFromDir": LoloLoadAudioFromDir,
+    "LoloGetFileCount":LoloGetFileCount
 }
 
 # 节点显示名称映射
@@ -44,8 +49,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "WanInfiniteTalkToVideoEx": "Wan Infinite Talk To Video (Extended)",
     "LoloVideoSaveOutput" : "Lolo Video Save Output",
     "LoLolClearCache": "LoLo: Clear Cache",
-    "LoLolClearCacheWithLabel": "LoLo: Clear Cache (Labeled)"
-
+    "LoLolClearCacheWithLabel": "LoLo: Clear Cache (Labeled)",
+    "LoloLoadAudioFromDir": "LoLo Load Audio From Dir",
+    "LoloGetFileCount": "LoLo Get File Count"
 }
 
 NODE_DIR = os.path.dirname(os.path.abspath(__file__))
