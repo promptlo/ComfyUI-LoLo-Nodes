@@ -12,7 +12,7 @@ from .lolo_video_save_output import LoloVideoSaveOutput
 from .lolo_clear_cache import LoLolClearCache, LoLolClearCacheWithLabel
 from .lolo_load_audio_from_dir import LoloLoadAudioFromDir
 from .lolo_get_file_count import LoloGetFileCount
-
+from .lolo_load_video_from_dir import LoloLoadVideoFromDir
 
      
 import os
@@ -32,7 +32,10 @@ NODE_CLASS_MAPPINGS = {
     "LoLolClearCache": LoLolClearCache,
     "LoLolClearCacheWithLabel": LoLolClearCacheWithLabel,
     "LoloLoadAudioFromDir": LoloLoadAudioFromDir,
-    "LoloGetFileCount":LoloGetFileCount
+    "LoloGetFileCount":LoloGetFileCount,
+    "LoloLoadVideoFromDir": LoloLoadVideoFromDir
+   
+
 }
 
 # 节点显示名称映射
@@ -51,7 +54,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LoLolClearCache": "LoLo: Clear Cache",
     "LoLolClearCacheWithLabel": "LoLo: Clear Cache (Labeled)",
     "LoloLoadAudioFromDir": "LoLo Load Audio From Dir",
-    "LoloGetFileCount": "LoLo Get File Count"
+    "LoloGetFileCount": "LoLo Get File Count",
+    "LoloLoadVideoFromDir": "LoLo Load Video From Dir"
 }
 
 NODE_DIR = os.path.dirname(os.path.abspath(__file__))
