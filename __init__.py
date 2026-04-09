@@ -13,6 +13,8 @@ from .lolo_clear_cache import LoLolClearCache, LoLolClearCacheWithLabel
 from .lolo_load_audio_from_dir import LoloLoadAudioFromDir
 from .lolo_get_file_count import LoloGetFileCount
 from .lolo_load_video_from_dir import LoloLoadVideoFromDir
+from .JSONShortsMVParser import  JSONShortsMVByIndex, JSONArrayLength
+from .lolo_generate_batch_save import LoloGenerateBatchSave
 
      
 import os
@@ -33,7 +35,10 @@ NODE_CLASS_MAPPINGS = {
     "LoLolClearCacheWithLabel": LoLolClearCacheWithLabel,
     "LoloLoadAudioFromDir": LoloLoadAudioFromDir,
     "LoloGetFileCount":LoloGetFileCount,
-    "LoloLoadVideoFromDir": LoloLoadVideoFromDir
+    "LoloLoadVideoFromDir": LoloLoadVideoFromDir,
+    "JSONShortsMVByIndex": JSONShortsMVByIndex,
+    "JSONArrayLength": JSONArrayLength,
+    "Lolo_generate_batch_save": LoloGenerateBatchSave
    
 
 }
@@ -55,7 +60,10 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LoLolClearCacheWithLabel": "LoLo: Clear Cache (Labeled)",
     "LoloLoadAudioFromDir": "LoLo Load Audio From Dir",
     "LoloGetFileCount": "LoLo Get File Count",
-    "LoloLoadVideoFromDir": "LoLo Load Video From Dir"
+    "LoloLoadVideoFromDir": "LoLo Load Video From Dir",
+    "JSONShortsMVByIndex": "JSON Shorts MV By Index",
+    "JSONArrayLength": "JSON Array Length",
+    "Lolo_generate_batch_save": "Lolo Generate Batch Save",
 }
 
 NODE_DIR = os.path.dirname(os.path.abspath(__file__))

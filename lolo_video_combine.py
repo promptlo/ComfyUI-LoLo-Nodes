@@ -18,6 +18,7 @@ class LoloVideoCombine:
             },
             "optional": {
                 "any": ("*",),
+                "enable_combine": ("BOOLEAN", {"default": True}),
             },
         }
 
@@ -37,22 +38,36 @@ class LoloVideoCombine:
         except RuntimeError as e:
             raise RuntimeError(f"节点初始化失败: {e}")
 
-    def combine(self, video_dir, audio, filename_prefix, any=None):
-        # ---------- 智能路径解析 ----------
+    def combine(self, video_dir, audio, filename_prefix, any=None, enable_combine=True):
+        # ---------- 路径解析 ----------
         if not os.path.isabs(video_dir):
             video_dir = os.path.join(folder_paths.get_output_directory(), video_dir)
             print(f"[LoloVideoCombine] 解析相对路径为: {video_dir}")
 
+        # ---------- 模式1：不合并，仅列出已生成的视频文件 ----------
+        if not enable_combine:
+            if not os.path.isdir(video_dir):
+                raise NotADirectoryError(f"目录不存在: {video_dir}")
+            # 获取所有视频文件（扩展名与合并时一致）
+            video_extensions = ('.mp4', '.avi', '.mov', '.mkv', '.webm')
+            files = [f for f in os.listdir(video_dir) if f.lower().endswith(video_extensions)]
+            files.sort()
+            if not files:
+                result_str = "当前没有已生成的视频文件。"
+            else:
+                result_str = "当前已完成：\n" + "\n".join(files)
+            print(f"[LoloVideoCombine] 合并已禁用，返回文件列表:\n{result_str}")
+            return (result_str,)
+
+        # ---------- 模式2：正常合并（原有逻辑） ----------
         if not os.path.isdir(video_dir):
             raise NotADirectoryError(f"目录不存在: {video_dir}")
 
-        # ---------- 获取视频文件列表 ----------
         files = [f for f in os.listdir(video_dir) if f.lower().endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm'))]
         files.sort()
         if not files:
             raise RuntimeError(f"目录中没有视频文件: {video_dir}")
 
-        # ---------- 自动生成输出路径 ----------
         output_dir = folder_paths.get_output_directory()
         os.makedirs(output_dir, exist_ok=True)
         counter = 1
@@ -62,13 +77,11 @@ class LoloVideoCombine:
                 break
             counter += 1
 
-        # ---------- 临时文件变量预定义 ----------
         list_file = None
         temp_video = None
         audio_file = None
 
         try:
-            # ---------- 创建 concat 列表文件（智能引号 + 正斜杠）----------
             with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
                 list_file = f.name
                 for file in files:
@@ -79,11 +92,9 @@ class LoloVideoCombine:
                     else:
                         f.write(f'file {full_path}\n')
 
-            # ---------- 临时无音频视频 ----------
             with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as tmp:
                 temp_video = tmp.name
 
-            # ---------- 尝试快速拼接（流复制）----------
             try:
                 print(f"[LoloVideoCombine] 尝试快速拼接（流复制）...")
                 subprocess.run([self.ffmpeg_path, "-f", "concat", "-safe", "0",
@@ -94,7 +105,6 @@ class LoloVideoCombine:
                 print(f"[LoloVideoCombine] 流复制失败，错误信息:")
                 print(e.stderr.decode('utf-8', errors='ignore'))
                 print(f"[LoloVideoCombine] 降级为重新编码（兼容模式）...")
-
                 try:
                     subprocess.run([self.ffmpeg_path, "-f", "concat", "-safe", "0",
                                    "-i", list_file,
@@ -112,19 +122,15 @@ class LoloVideoCombine:
                     print(error_msg)
                     raise RuntimeError(error_msg)
 
-            # ---------- 处理音频（使用 ffmpeg 直接编码为 wav）----------
             waveform = audio["waveform"]
             sample_rate = audio["sample_rate"]
-
-            # 确保波形为 [channels, samples] 2D 格式，并转换为 float32 NumPy 数组
             if waveform.dim() == 3:
-                waveform = waveform.squeeze(0)               # [1, C, S] → [C, S]
+                waveform = waveform.squeeze(0)
             elif waveform.dim() == 1:
-                waveform = waveform.unsqueeze(0)             # [S] → [1, S]
+                waveform = waveform.unsqueeze(0)
 
             samples = waveform.shape[1]
             channels = waveform.shape[0]
-            # 转换为 [samples, channels] 并转为 float32 bytes
             audio_data = waveform.t().contiguous().numpy().astype(np.float32)
 
             with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_audio:
@@ -149,7 +155,6 @@ class LoloVideoCombine:
                 stderr = proc_audio.stderr.read().decode('utf-8', errors='ignore')
                 raise RuntimeError(f"ffmpeg 音频编码失败 (返回码 {proc_audio.returncode}):\n{stderr}")
 
-            # ---------- 合并音频到最终视频 ----------
             subprocess.run([self.ffmpeg_path, "-i", temp_video, "-i", audio_file,
                            "-c:v", "copy", "-c:a", "aac",
                            "-map", "0:v:0", "-map", "1:a:0",
